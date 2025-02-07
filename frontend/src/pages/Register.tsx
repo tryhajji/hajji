@@ -1,7 +1,14 @@
-import { FC } from 'react';
+// import React from 'react';
 import { Link } from 'react-router-dom';
 
-const Register: FC = () => {
+export interface RegisterFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
+const Register = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
       <div className="max-w-4xl mx-auto pt-16 pb-12 px-4 sm:px-6 lg:px-8">

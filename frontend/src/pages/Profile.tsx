@@ -10,27 +10,60 @@ interface ProfileSection {
 const Profile = () => {
   const { user } = useAppContext();
   const [activeSection, setActiveSection] = useState('personal');
-  const [formData, setFormData] = useState({
-    // Personal Information
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
+  const [formData, setFormData] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    dateOfBirth: string;
+    gender: string;
+    nationality: string;
+    passportNumber: string;
+    passportExpiry: string;
+    madhab: string;
+    hajjCompleted: boolean;
+    umrahCompleted: boolean;
+    specialNeeds: string;
+    dietaryRestrictions: string;
+    prayerAccommodations: string;
+    preferredAirline: string;
+    seatPreference: string;
+    mealPreference: string;
+    accommodationPreference: string;
+    roomType: string;
+    groupSize: string;
+    budgetRange: string;
+    language: string;
+    notificationPreferences: {
+      email: boolean;
+      sms: boolean;
+      pushNotifications: boolean;
+    };
+    newsletterSubscription: boolean;
+    emergencyContactName: string;
+    emergencyContactRelation: string;
+    emergencyContactPhone: string;
+    emergencyContactEmail: string;
+    identityDocument: File | null;
+    passportCopy: File | null;
+    vaccinationRecord: File | null;
+    medicalCertificate: File | null;
+  }>({
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
+    email: user?.email ?? '',
+    phone: user?.phone ?? '',
     dateOfBirth: '',
     gender: '',
     nationality: '',
     passportNumber: '',
     passportExpiry: '',
-
-    // Religious Information
-    madhab: '', // Islamic school of thought
+    madhab: '',
     hajjCompleted: false,
     umrahCompleted: false,
     specialNeeds: '',
     dietaryRestrictions: '',
     prayerAccommodations: '',
-
-    // Travel Preferences
     preferredAirline: '',
     seatPreference: '',
     mealPreference: '',
@@ -38,8 +71,6 @@ const Profile = () => {
     roomType: '',
     groupSize: '',
     budgetRange: '',
-    
-    // Communication Preferences
     language: '',
     notificationPreferences: {
       email: true,
@@ -47,14 +78,10 @@ const Profile = () => {
       pushNotifications: true
     },
     newsletterSubscription: true,
-
-    // Emergency Contact
     emergencyContactName: '',
     emergencyContactRelation: '',
     emergencyContactPhone: '',
     emergencyContactEmail: '',
-
-    // Documents
     identityDocument: null,
     passportCopy: null,
     vaccinationRecord: null,

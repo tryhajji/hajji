@@ -7,9 +7,12 @@ type ToastMessage = {
   type: "SUCCESS" | "ERROR";
 };
 
-export type UserRole = 'admin' | 'agency' | 'umrah_group' | 'user';
+export type UserRole = 'admin' | 'agency' | 'umrah_group' | 'client';
 
 export interface AppUser extends Models.User<Models.Preferences> {
+  firstName: string;
+  lastName: string;
+  email: string;
   role?: UserRole;
 }
 

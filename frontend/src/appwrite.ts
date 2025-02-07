@@ -1,6 +1,9 @@
-import { Client, Account, Databases, Teams, ID, Models } from 'appwrite';
+import { Client, Account, Databases, Teams, ID, OAuthProvider } from 'appwrite';
+import { UserRole} from './contexts/AppContext';
 
-const client = new Client();
+const client = new Client()
+    .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT || '')
+    .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID || '');
 
 const appwriteEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
 const appwriteProjectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
@@ -14,10 +17,6 @@ export const CLIENT_TEAM_ID = 'client';
 if (!appwriteEndpoint || !appwriteProjectId) {
     throw new Error('Missing Appwrite configuration. Please check your .env file.');
 }
-
-client
-    .setEndpoint(appwriteEndpoint)
-    .setProject(appwriteProjectId);
 
 export const account = new Account(client);
 export const databases = new Databases(client);
@@ -80,11 +79,10 @@ export const getCurrentUser = async () => {
         const user = await account.get();
         if (!user) return null;
 
-        // Get user's team memberships
         const memberships = await teams.list();
+        const preferences = await account.getPrefs();
         
-        // Determine user role based on team membership
-        let role = 'client';
+        let role: UserRole = 'client';
         for (const membership of memberships.teams) {
             if (membership.$id === ADMIN_TEAM_ID) {
                 role = 'admin';
@@ -100,7 +98,9 @@ export const getCurrentUser = async () => {
         
         return {
             ...user,
-            role
+            role,
+            firstName: preferences.firstName || '',
+            lastName: preferences.lastName || ''
         };
     } catch (error) {
         console.error('Get current user error:', error);
@@ -121,7 +121,7 @@ export const logout = async () => {
 export const loginWithGoogle = async () => {
     try {
         await account.createOAuth2Session(
-            'google',
+            OAuthProvider.Google,
             `${window.location.origin}/auth-callback`,
             `${window.location.origin}/auth-callback?error=true`
         );
@@ -176,22 +176,25 @@ export const requestPasswordReset = async (email: string) => {
     }
 };
 
+// Password reset confirmation function
 export const confirmPasswordReset = async (
-    userId: string,
-    secret: string,
-    password: string,
-    passwordAgain: string
+    userId: string, 
+    secret: string, 
+    newPassword: string, 
+    confirmPassword: string
 ) => {
+    // Validate that the new password and confirmation password match
+    if (newPassword !== confirmPassword) {
+        throw new Error('Passwords do not match.'); // Throw an error if they don't match
+    }
+
     try {
-        await account.updateRecovery(
-            userId,
-            secret,
-            password
-        );
-        return true;
+        // Call the Appwrite account method to update the password
+        await account.updateRecovery(userId, secret, newPassword);
+        return true; // Indicate success
     } catch (error) {
-        console.error('Confirm password reset error:', error);
-        throw error;
+        console.error('Confirm password reset error:', error); // Log the error for debugging
+        throw error; // Rethrow the error for handling in the calling function
     }
 };
 
@@ -236,7 +239,7 @@ export const hasPermission = async (requiredRole: 'admin' | 'agency' | 'umrah_gr
 export const createUser = async (userData: {
     email: string;
     password: string;
-    role: 'admin' | 'agency' | 'umrah_group' | 'user';
+    role: UserRole;
     firstName?: string;
     lastName?: string;
     agencyName?: string;
@@ -263,7 +266,7 @@ export const createUser = async (userData: {
             userData.email,
             userData.password,
             name,
-            userData.role === 'user' ? 'client' : userData.role
+            userData.role
         );
 
         // Store additional user data in preferences or a separate database collection if needed

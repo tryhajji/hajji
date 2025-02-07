@@ -1,28 +1,27 @@
-import { FC, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 interface UmrahGroup {
   id: string;
   name: string;
-  leader: string;
-  size: number;
-  startDate: string;
-  endDate: string;
-  status: string;
-  location: string;
-  description: string;
-  price: number;
-  rating: number;
-  reviews: number;
   image: string;
-  languages: string[];
-  amenities: string[];
-  duration: number;
-  isFeatured?: boolean;
+  rating: number;
   reviewCount: number;
+  departureLocation: string;
+  departureDate: string;
+  duration: number;
+  groupSize: number;
+  price: number;
+  description: string;
+  leaderName: string;
+  leaderExperience: number;
+  language: string[];
+  amenities: string[];
+  availableSpots: number;
+  isFeatured?: boolean;
 }
 
-const UmrahGroupSearch: FC = () => {
+const UmrahGroupSearch = () => {
   const [groups, setGroups] = useState<UmrahGroup[]>([]);
   const [filteredGroups, setFilteredGroups] = useState<UmrahGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,8 +37,8 @@ const UmrahGroupSearch: FC = () => {
   });
 
   // Get unique values for filters
-  const departureLocations = [...new Set(groups.map(group => group.location))];
-  const languages = [...new Set(groups.flatMap(group => group.languages))];
+  const departureLocations = [...new Set(groups.map(group => group.departureLocation))];
+  const languages = [...new Set(groups.flatMap(group => group.language))];
   const amenities = [...new Set(groups.flatMap(group => group.amenities))];
 
   // Filter and sort groups
@@ -51,14 +50,14 @@ const UmrahGroupSearch: FC = () => {
       result = result.filter(group => 
         group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         group.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        group.leader.toLowerCase().includes(searchTerm.toLowerCase())
+        group.leaderName.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply filters
     if (filters.departureLocations.length > 0) {
       result = result.filter(group => 
-        filters.departureLocations.includes(group.location)
+        filters.departureLocations.includes(group.departureLocation)
       );
     }
 
@@ -69,7 +68,7 @@ const UmrahGroupSearch: FC = () => {
     if (filters.languages.length > 0) {
       result = result.filter(group =>
         filters.languages.some(lang => 
-          group.languages.includes(lang)
+          group.language.includes(lang)
         )
       );
     }
@@ -106,14 +105,14 @@ const UmrahGroupSearch: FC = () => {
         case 'price-high':
           return b.price - a.price;
         case 'date-soon':
-          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+          return new Date(a.departureDate).getTime() - new Date(b.departureDate).getTime();
         case 'availability':
-          return b.size - a.size;
+          return b.availableSpots - a.availableSpots;
         case 'bestMatch':
         default:
           // For best match, prioritize featured groups and availability
-          const aScore = (a.isFeatured ? 2 : 0) + (a.size > 0 ? 1 : 0) + a.rating;
-          const bScore = (b.isFeatured ? 2 : 0) + (b.size > 0 ? 1 : 0) + b.rating;
+          const aScore = (a.isFeatured ? 2 : 0) + (a.availableSpots > 0 ? 1 : 0) + a.rating;
+          const bScore = (b.isFeatured ? 2 : 0) + (b.availableSpots > 0 ? 1 : 0) + b.rating;
           return bScore - aScore;
       }
     });
@@ -455,7 +454,7 @@ const UmrahGroupSearch: FC = () => {
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <div className="text-sm text-gray-600">Departure</div>
-                          <div className="font-medium">{new Date(group.startDate).toLocaleDateString()}</div>
+                          <div className="font-medium">{new Date(group.departureDate).toLocaleDateString()}</div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-600">Duration</div>

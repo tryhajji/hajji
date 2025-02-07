@@ -203,6 +203,18 @@ const PackageCard: React.FC<PackageCardProps> = ({
             View Deal
           </button>
         </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Transportation: {transportationType}
+          </div>
+          <div className="text-sm text-gray-600">
+            Duration Flexible: {isDurationFlexible ? 'Yes' : 'No'}
+          </div>
+          <div className="text-sm text-gray-600">
+            Price Type: {priceType}
+          </div>
+        </div>
       </div>
     </Link>
   );

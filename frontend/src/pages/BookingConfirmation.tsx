@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import Footer from '../components/Footer';
-import { useAppContext } from '../contexts/AppContext';
 
 type PaymentStatus = 'succeeded' | 'failed' | 'processing' | 'requires_payment_method';
 
@@ -22,7 +21,6 @@ const BookingConfirmation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { isLoggedIn } = useAppContext();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('processing');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [packageData, setPackageData] = useState<PackageData | null>(null);

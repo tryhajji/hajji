@@ -28,10 +28,7 @@ interface ContentResourceItem extends BaseResourceItem {
 
 type ResourceItem = LinkResourceItem | DownloadResourceItem | ContentResourceItem;
 
-interface ResourceSection {
-  title: string;
-  items: ResourceItem[];
-}
+
 
 const Resources: FC = () => {
   const resources: ResourceItem[] = [
@@ -222,7 +219,7 @@ const Resources: FC = () => {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Resources</h1>
 
-        {resources.map((resource, index) => (
+        {resources.map((resource) => (
           <div key={resource.id} className="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">{resource.title}</h2>
             

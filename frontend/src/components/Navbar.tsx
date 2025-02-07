@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import  { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
-import { getCurrentUser, logout } from '../appwrite';
+import {  logout } from '../appwrite';
 
 const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);

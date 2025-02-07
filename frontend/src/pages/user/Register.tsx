@@ -38,7 +38,7 @@ const UserRegister = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         phoneNumber: formData.phoneNumber,
-        role: 'user',
+        role: 'client',
       });
       navigate('/user/dashboard');
     } catch (err) {

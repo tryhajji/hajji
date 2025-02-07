@@ -4,6 +4,11 @@ import { useAppContext } from "../contexts/AppContext";
 import * as apiClient from "../api-client";
 import { loginWithGoogle } from "../appwrite";
 
+export interface SignInFormData {
+  email: string;
+  password: string;
+}
+
 const SignIn = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const { handleSignIn } = useAppContext();

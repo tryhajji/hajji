@@ -1,13 +1,14 @@
 import { Client, Account, Teams, Databases } from 'appwrite';
 
+
 // Team IDs
 export const ADMIN_TEAM_ID = 'admin';
 export const AGENCY_TEAM_ID = 'agency';
 export const UMRAH_GROUP_TEAM_ID = 'umrah_group';
 
 const client = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || '')
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '');
+    .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT || '')
+    .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID || '');
 
 export const account = new Account(client);
 export const teams = new Teams(client);

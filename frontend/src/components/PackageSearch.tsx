@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface Package {
@@ -15,7 +15,6 @@ interface Package {
 
 const PackageSearch: React.FC = () => {
   const navigate = useNavigate();
-  const [filteredPackages, setFilteredPackages] = useState<Package[]>([]);
 
   const handlePackageClick = (packageId: string) => {
     navigate(`/package/${packageId}`);
@@ -70,7 +69,7 @@ const PackageSearch: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {filteredPackages.map((pkg) => (
+      {packages.map((pkg) => (
         <div
           key={pkg.id}
           className="cursor-pointer"

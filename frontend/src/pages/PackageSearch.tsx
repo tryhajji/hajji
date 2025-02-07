@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useLocation, useNavigationType } from 'react-router-dom';
-import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 import PackageCard from '../components/PackageCard';
+import  { useState, useEffect } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 
 interface Package {
   id: string;
@@ -12,9 +10,7 @@ interface Package {
   rating: number;
   reviewCount: number;
   price: number;
-  priceType: 'fixed' | 'per_day';
   duration: number;
-  isDurationFlexible: boolean;
   location: string;
   hotelStars: number;
   distanceFromHaram: number;
@@ -25,10 +21,12 @@ interface Package {
   visaIncluded: boolean;
   startDate: Date;
   endDate: Date;
-  isDateFlexible: boolean;
   amenities: string[];
   thumbnail: string;
   isFeatured?: boolean;
+  priceType: 'fixed' | 'per_day';
+  isDurationFlexible: boolean;
+  isDateFlexible: boolean;
 }
 
 interface SortOption {
@@ -50,172 +48,33 @@ interface PackageSearchProps {
   type?: 'hajj' | 'umrah';
 }
 
-const getDummyPackages = (): Package[] => [
-  {
-    id: 'premium-hajj',
-    title: 'Premium Hajj Package',
-    type: 'hajj',
-    agencyName: 'Al-Safar Travel',
-    rating: 4.9,
-    reviewCount: 128,
-    price: 8999,
-    priceType: 'fixed',
-    duration: 15,
-    isDurationFlexible: false,
-    location: 'Mecca, Saudi Arabia',
-    hotelStars: 5,
-    distanceFromHaram: 100,
-    meals: 'full-board',
-    groupSize: 25,
-    transportationType: 'vip',
-    flightIncluded: true,
-    visaIncluded: true,
-    startDate: new Date('2025-06-01'),
-    endDate: new Date('2025-06-15'),
-    isDateFlexible: false,
-    amenities: ['5-star hotels', 'VIP transport', 'Full board meals', 'Guided tours'],
-    thumbnail: '/images/mecca.jpg',
-    isFeatured: true
-  },
-  {
-    id: 'standard-umrah',
-    title: 'Standard Umrah Package',
-    type: 'umrah',
-    agencyName: 'Baraka Tours',
-    rating: 4.7,
-    reviewCount: 95,
-    price: 200,
-    priceType: 'per_day',
-    duration: 1,
-    isDurationFlexible: true,
-    location: 'Medina, Saudi Arabia',
-    hotelStars: 4,
-    distanceFromHaram: 300,
-    meals: 'half-board',
-    groupSize: 15,
-    transportationType: 'standard',
-    flightIncluded: true,
-    visaIncluded: true,
-    startDate: new Date('2025-01-01'),
-    endDate: new Date('2025-12-31'),
-    isDateFlexible: true,
-    amenities: ['4-star hotels', 'Airport transfers', 'Half board meals', 'Local guide'],
-    thumbnail: '/images/medina.jpg',
-    isFeatured: true
-  },
-  {
-    id: 'group-hajj',
-    title: 'Group Hajj Package',
-    type: 'hajj',
-    agencyName: 'Al-Iman Travels',
-    rating: 4.8,
-    reviewCount: 112,
-    price: 7499,
-    priceType: 'fixed',
-    duration: 21,
-    isDurationFlexible: false,
-    location: 'Mecca & Medina',
-    hotelStars: 4,
-    distanceFromHaram: 500,
-    meals: 'full-board',
-    groupSize: 35,
-    transportationType: 'standard',
-    flightIncluded: true,
-    visaIncluded: true,
-    startDate: new Date('2025-06-01'),
-    endDate: new Date('2025-06-21'),
-    isDateFlexible: false,
-    amenities: ['4-star hotels', 'Group transport', 'Full board meals', 'Religious guide'],
-    thumbnail: '/images/group.jpg',
-    isFeatured: true
-  },
-  {
-    id: 'deluxe-umrah',
-    title: 'Deluxe Umrah Package',
-    type: 'umrah',
-    agencyName: 'Royal Hajj Services',
-    rating: 5.0,
-    reviewCount: 78,
-    price: 300,
-    priceType: 'per_day',
-    duration: 1,
-    isDurationFlexible: true,
-    location: 'Mecca & Medina',
-    hotelStars: 5,
-    distanceFromHaram: 150,
-    meals: 'full-board',
-    groupSize: 10,
-    transportationType: 'vip',
-    flightIncluded: true,
-    visaIncluded: true,
-    startDate: new Date('2025-01-01'),
-    endDate: new Date('2025-12-31'),
-    isDateFlexible: true,
-    amenities: ['5-star hotels', 'Private transport', 'Full board meals', 'Personal guide'],
-    thumbnail: '/images/deluxe.jpg',
-    isFeatured: true
-  }
-];
-
 const PackageSearch = ({ type }: PackageSearchProps) => {
-  console.log('PackageSearch component rendering with type:', type);
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const navigationType = useNavigationType();
   const [packages, setPackages] = useState<Package[]>([]);
   const [sortBy, setSortBy] = useState<string>('bestMatch');
-  const [filters, setFilters] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   
-  // Parse search parameters with error handling
-  const parseSearchParams = () => {
-    try {
-      return {
-        startDate: searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : null,
-        endDate: searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : null,
-        travelers: parseInt(searchParams.get('travelers') || '1'),
-        tripType: (type || searchParams.get('type') || 'umrah') as 'umrah' | 'hajj',
-        priceRange: searchParams.get('priceRange') || 'any'
-      };
-    } catch (error) {
-      console.error('Error parsing search parameters:', error);
-      return null;
-    }
-  };
-
-  // Initialize state from URL parameters
-  const searchCriteria = parseSearchParams();
-  const [startDate, setStartDate] = useState<Date | null>(searchCriteria?.startDate || null);
-  const [endDate, setEndDate] = useState<Date | null>(searchCriteria?.endDate || null);
-  const [travelers, setTravelers] = useState<number>(searchCriteria?.travelers || 1);
-  const [tripType, setTripType] = useState<'umrah' | 'hajj'>(searchCriteria?.tripType || 'umrah');
-  const [priceRange, setPriceRange] = useState<string>(searchCriteria?.priceRange || 'any');
-
   // Update initial state to include search parameters
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>(() => {
-    // Get search parameters with null checks and safe defaults
-    const initialType = type || searchParams.get('type') || '';
-    const initialPriceRange = searchParams.get('priceRange') || '';
-    const [priceMin, priceMax] = initialPriceRange 
-      ? initialPriceRange.split('-').map(p => p.trim()) 
-      : ['', ''];
-
+    // Get search parameters
+    const initialType = type || searchParams.get('type');
+    const initialPriceRange = searchParams.get('priceRange');
+    
     return {
       type: initialType ? [initialType] : [],
       hotelStars: [],
       meals: '',
       transportationType: '',
       amenities: [],
-      priceMin: priceMin || '',
-      priceMax: priceMax || ''
+      priceMin: initialPriceRange ? parseInt(initialPriceRange.split(' - ')[0].replace(/[^0-9]/g, '')) : '',
+      priceMax: initialPriceRange ? parseInt(initialPriceRange.split(' - ')[1].replace(/[^0-9]/g, '')) : ''
     };
   });
 
   // Add effect to update filters when search params change
   useEffect(() => {
-    // Update type filter
     if (type || searchParams.get('type')) {
       setActiveFilters(prev => ({
         ...prev,
@@ -223,25 +82,13 @@ const PackageSearch = ({ type }: PackageSearchProps) => {
       }));
     }
 
-    // Update price range filter
-    const priceRangeParam = searchParams.get('priceRange');
-    if (priceRangeParam) {
-      try {
-        const [min = '', max = ''] = priceRangeParam.split('-').map(p => p?.trim() || '');
-        setActiveFilters(prev => ({
-          ...prev,
-          priceMin: min,
-          priceMax: max
-        }));
-      } catch (error) {
-        console.error('Error parsing price range:', error);
-        // Keep existing values on error
-        setActiveFilters(prev => ({
-          ...prev,
-          priceMin: prev.priceMin || '',
-          priceMax: prev.priceMax || ''
-        }));
-      }
+    if (searchParams.get('priceRange')) {
+      const priceRange = searchParams.get('priceRange')!;
+      setActiveFilters(prev => ({
+        ...prev,
+        priceMin: priceRange.split(' - ')[0].replace(/[^0-9]/g, ''),
+        priceMax: priceRange.split(' - ')[1].replace(/[^0-9]/g, '')
+      }));
     }
   }, [type, searchParams]);
 
@@ -303,12 +150,11 @@ const PackageSearch = ({ type }: PackageSearchProps) => {
   // Add filter function
   const filterPackages = (packages: Package[]): Package[] => {
     console.log('Filtering with criteria:', {
-      tripType,
       type,
-      startDate,
-      endDate,
-      travelers,
-      priceRange,
+      startDate: searchParams.get('startDate'),
+      endDate: searchParams.get('endDate'),
+      travelers: searchParams.get('travelers'),
+      priceRange: searchParams.get('priceRange'),
       activeFilters
     });
 
@@ -319,28 +165,28 @@ const PackageSearch = ({ type }: PackageSearchProps) => {
       }
 
       // Filter by price range
-      if (activeFilters.priceMin || activeFilters.priceMax) {
-        const min = parseInt(activeFilters.priceMin) || 0;
-        const max = parseInt(activeFilters.priceMax) || Infinity;
+      if (searchParams.get('priceRange') && searchParams.get('priceRange') !== 'any') {
+        const [minStr, maxStr] = searchParams.get('priceRange')!.split(' - ').map(str => str.replace(/[^0-9]/g, ''));
+        const min = parseInt(minStr);
+        const max = parseInt(maxStr);
         
-        if (pkg.price < min || pkg.price > max) {
+        if (!isNaN(min) && !isNaN(max) && (pkg.price < min || pkg.price > max)) {
           return false;
         }
       }
 
-      // Filter by date range - check if package's date range overlaps with selected dates
-      if (startDate && endDate) {
+      // Filter by date range
+      if (searchParams.get('startDate') && searchParams.get('endDate')) {
         const packageStartDate = new Date(pkg.startDate);
         const packageEndDate = new Date(pkg.endDate);
         
-        // Package is available if it starts before the end date AND ends after the start date
-        if (packageStartDate > endDate || packageEndDate < startDate) {
+        if (packageEndDate < new Date(searchParams.get('startDate')!) || packageStartDate > new Date(searchParams.get('endDate')!)) {
           return false;
         }
       }
 
       // Filter by travelers
-      if (travelers && travelers > 1 && pkg.groupSize < travelers) {
+      if (searchParams.get('travelers') && parseInt(searchParams.get('travelers')!) > 1 && pkg.groupSize < parseInt(searchParams.get('travelers')!)) {
         return false;
       }
 
@@ -370,54 +216,241 @@ const PackageSearch = ({ type }: PackageSearchProps) => {
     });
   };
 
-  // Load packages when component mounts
+  // Load packages when component mounts or when location state indicates a refresh
   useEffect(() => {
-    console.log('Loading packages...');
-    const loadPackages = async () => {
-      try {
-        const dummyData = getDummyPackages();
-        console.log('Dummy data loaded:', dummyData);
-        setPackages(dummyData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading packages:', error);
-        setError('Failed to load packages.');
-        setLoading(false);
-      }
+    const loadPackages = () => {
+      setLoading(true);
+      // Simulate API call
+      setTimeout(() => {
+        try {
+          const dummyPackages: Package[] = [
+            {
+              id: 'premium-hajj',
+              title: 'Premium Hajj Package',
+              type: 'hajj',
+              agencyName: 'Al-Safar Travel',
+              rating: 4.9,
+              reviewCount: 128,
+              price: 8999,
+              duration: 15,
+              location: 'Mecca & Medina',
+              hotelStars: 5,
+              distanceFromHaram: 100,
+              meals: 'full-board',
+              groupSize: 25,
+              transportationType: 'vip',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2024-06-01'),
+              endDate: new Date('2024-06-15'),
+              amenities: ['Flight', 'Visa', 'VIP Transport', '5-Star Hotels', 'Full Board Meals', 'Ziyarat Tours'],
+              thumbnail: '/images/mecca.jpg',
+              isFeatured: true,
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: true
+            },
+            {
+              id: 'standard-umrah',
+              title: 'Standard Umrah Package',
+              type: 'umrah',
+              agencyName: 'Baraka Tours',
+              rating: 4.7,
+              reviewCount: 89,
+              price: 5999,
+              duration: 10,
+              location: 'Mecca & Medina',
+              hotelStars: 4,
+              distanceFromHaram: 300,
+              meals: 'half-board',
+              groupSize: 30,
+              transportationType: 'standard',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2024-07-01'),
+              endDate: new Date('2024-07-10'),
+              amenities: ['Flight', 'Visa', 'Standard Transport', '4-Star Hotels', 'Half Board Meals'],
+              thumbnail: '/images/medina.jpg',
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: false
+            },
+            {
+              id: 'economy-hajj',
+              title: 'Economy Hajj Package',
+              type: 'hajj',
+              agencyName: 'Ihsan Travel',
+              rating: 4.5,
+              reviewCount: 76,
+              price: 6999,
+              duration: 12,
+              location: 'Mecca & Medina',
+              hotelStars: 3,
+              distanceFromHaram: 800,
+              meals: 'breakfast',
+              groupSize: 40,
+              transportationType: 'economy',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2024-08-01'),
+              endDate: new Date('2024-08-12'),
+              amenities: ['Flight', 'Visa', 'Economy Transport', '3-Star Hotels', 'Breakfast'],
+              thumbnail: '/images/group.jpg',
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: false
+            },
+            {
+              id: 'deluxe-umrah',
+              title: 'Deluxe Umrah Package',
+              type: 'umrah',
+              agencyName: 'Royal Hajj Services',
+              rating: 5.0,
+              reviewCount: 45,
+              price: 7999,
+              duration: 14,
+              location: 'Mecca & Medina',
+              hotelStars: 5,
+              distanceFromHaram: 50,
+              meals: 'full-board',
+              groupSize: 20,
+              transportationType: 'vip',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2024-09-01'),
+              endDate: new Date('2024-09-14'),
+              amenities: ['Flight', 'Visa', 'VIP Transport', 'Luxury Hotels', 'Full Board Meals', 'Private Guide'],
+              thumbnail: '/images/deluxe.jpg',
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: false
+            },
+            {
+              id: 'family-umrah',
+              title: 'Family Umrah Package',
+              type: 'umrah',
+              agencyName: 'Family Muslim Tours',
+              rating: 4.8,
+              reviewCount: 92,
+              price: 6499,
+              duration: 10,
+              location: 'Mecca & Medina',
+              hotelStars: 4,
+              distanceFromHaram: 400,
+              meals: 'full-board',
+              groupSize: 15,
+              transportationType: 'standard',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2024-10-01'),
+              endDate: new Date('2024-10-10'),
+              amenities: ['Flight', 'Visa', 'Family Rooms', 'Kid-Friendly Meals', 'Educational Tours'],
+              thumbnail: '/images/family.jpg',
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: false
+            },
+            {
+              id: 'luxury-hajj',
+              title: 'Luxury Hajj Experience',
+              type: 'hajj',
+              agencyName: 'Elite Islamic Tours',
+              rating: 5.0,
+              reviewCount: 156,
+              price: 12999,
+              duration: 21,
+              location: 'Mecca & Medina',
+              hotelStars: 5,
+              distanceFromHaram: 50,
+              meals: 'full-board',
+              groupSize: 15,
+              transportationType: 'vip',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2024-06-15'),
+              endDate: new Date('2024-07-05'),
+              amenities: ['Private Suite', 'Personal Guide', 'VIP Transport', 'Luxury Hotels', 'Gourmet Meals', 'Exclusive Ziyarat'],
+              thumbnail: '/images/luxury.jpg',
+              isFeatured: true,
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: false
+            },
+            {
+              id: 'budget-umrah',
+              title: 'Budget-Friendly Umrah',
+              type: 'umrah',
+              agencyName: 'Al-Amin Travel',
+              rating: 4.3,
+              reviewCount: 234,
+              price: 3999,
+              duration: 7,
+              location: 'Mecca & Medina',
+              hotelStars: 3,
+              distanceFromHaram: 1200,
+              meals: 'breakfast',
+              groupSize: 45,
+              transportationType: 'economy',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2024-11-01'),
+              endDate: new Date('2024-11-07'),
+              amenities: ['Flight', 'Visa', 'Basic Transport', '3-Star Hotels', 'Breakfast'],
+              thumbnail: '/images/budget.jpg',
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: false
+            },
+            {
+              id: 'ramadan-umrah',
+              title: 'Special Ramadan Umrah',
+              type: 'umrah',
+              agencyName: 'Blessed Journey',
+              rating: 4.9,
+              reviewCount: 178,
+              price: 8499,
+              duration: 15,
+              location: 'Mecca & Medina',
+              hotelStars: 5,
+              distanceFromHaram: 200,
+              meals: 'full-board',
+              groupSize: 30,
+              transportationType: 'vip',
+              flightIncluded: true,
+              visaIncluded: true,
+              startDate: new Date('2025-03-01'),
+              endDate: new Date('2025-03-15'),
+              amenities: ['Flight', 'Visa', 'VIP Transport', '5-Star Hotels', 'Iftar & Suhoor', 'Ramadan Programs'],
+              thumbnail: '/images/ramadan.jpg',
+              isFeatured: true,
+              priceType: 'fixed',
+              isDurationFlexible: false,
+              isDateFlexible: false
+            }
+          ];
+
+          console.log('Total packages before filtering:', dummyPackages.length);
+          
+          // Apply filters to the packages
+          const filteredPackages = filterPackages(dummyPackages);
+          console.log('Packages after filtering:', filteredPackages.length);
+          
+          // Apply sorting
+          const sortedPackages = sortPackages(filteredPackages, sortBy);
+          
+          setPackages(sortedPackages);
+        } catch (error) {
+          console.error('Error processing packages:', error);
+          setPackages([]);
+        } finally {
+          setLoading(false);
+        }
+      }, 1000);
     };
 
+    // Load packages on mount and when location state has refresh flag
     loadPackages();
-  }, []);
-
-  console.log('Current state:', { loading, error, packagesCount: packages.length });
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading packages...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 mb-4">
-            <i className="fas fa-exclamation-circle text-4xl"></i>
-          </div>
-          <p className="text-gray-800 font-medium">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Filter and sort packages
-  const filteredPackages = filterPackages(packages);
-  const sortedPackages = sortPackages(filteredPackages, sortBy);
+  }, [location.state, type, sortBy, activeFilters]);
 
   // Define filter options
   const filterOptions: FilterOption[] = [
@@ -505,135 +538,184 @@ const PackageSearch = ({ type }: PackageSearchProps) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Filters */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-lg font-semibold mb-4">Filters</h2>
-              <div className="space-y-6">
-                {filterOptions.map((filter, index) => (
-                  <div key={index} className="border-b pb-4 last:border-b-0">
-                    <h3 className="font-medium mb-3">{filter.label}</h3>
-                    {filter.type === 'checkbox' && filter.options && (
-                      <div className="space-y-2">
-                        {filter.options.map((option, optionIndex) => (
-                          <label key={optionIndex} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={activeFilters[filter.field]?.includes(option.value)}
-                              onChange={(e) => handleFilterChange(filter.field, option.value, e.target.checked)}
-                              className="rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                            <span className="ml-2 text-gray-700">{option.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                    {filter.type === 'radio' && filter.options && (
-                      <div className="space-y-2">
-                        {filter.options.map((option, optionIndex) => (
-                          <label key={optionIndex} className="flex items-center">
-                            <input
-                              type="radio"
-                              name={filter.field}
-                              checked={activeFilters[filter.field] === option.value}
-                              onChange={(e) => handleFilterChange(filter.field, option.value, e.target.checked)}
-                              className="border-gray-300 text-primary focus:ring-primary"
-                            />
-                            <span className="ml-2 text-gray-700">{option.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                    {filter.type === 'range' && (
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-4">
-                          <input
-                            type="number"
-                            placeholder="Min"
-                            value={activeFilters.priceMin}
-                            onChange={(e) => handleFilterChange('priceMin', e.target.value, true)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
-                          />
-                          <span className="text-gray-500">to</span>
-                          <input
-                            type="number"
-                            placeholder="Max"
-                            value={activeFilters.priceMax}
-                            onChange={(e) => handleFilterChange('priceMax', e.target.value, true)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+      <div className="py-8">
+        <div className="max-w-5xl mx-auto px-4">
+          <h1 className="text-3xl font-semibold mb-8">Search Packages</h1>
+
+          {/* Displaying the search parameters */}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold">Search Criteria</h2>
+            <p>Number of Travelers: {parseInt(searchParams.get('travelers') || '1')}</p>
+            <p>Trip Type: {type || (searchParams.get('type') as 'umrah' | 'hajj') || 'umrah'}</p>
+            <p>Price Range: {searchParams.get('priceRange') || 'any'}</p>
+          </div>
+
+          {/* Top Bar with Sort and View Options */}
+          <div className="sticky top-0 bg-white border-b z-30">
+            <div className="container mx-auto px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  >
+                    {sortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button 
+                    onClick={() => setViewMode('grid')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      viewMode === 'grid' 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <i className="fas fa-th-large mr-2"></i>
+                    Grid View
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('list')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      viewMode === 'list' 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <i className="fas fa-list mr-2"></i>
+                    List View
+                  </button>
+                </div>
+                <div className="text-sm text-gray-600">
+                  {packages.length} packages found
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Sorting and View Controls */}
-            <div className="mb-6 flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex gap-6">
+              {/* Filters Sidebar */}
+              <div className="w-64 flex-shrink-0">
+                <div className="bg-white rounded-lg shadow p-4 sticky top-20">
+                  <h2 className="font-semibold mb-4">Filters</h2>
+                  {filterOptions.map((filter) => (
+                    <div key={filter.field} className="mb-6">
+                      <h3 className="font-medium mb-2">{filter.label}</h3>
+                      {filter.type === 'checkbox' && (
+                        <div className="space-y-2">
+                          {filter.options?.map((option) => (
+                            <label key={option.value} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-emerald-600 rounded"
+                                checked={activeFilters[filter.field]?.includes(option.value)}
+                                onChange={(e) => handleFilterChange(filter.field, option.value, e.target.checked)}
+                              />
+                              <span className="ml-2 text-sm">{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {filter.type === 'range' && filter.field === 'price' ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              className="w-24 h-8 px-2 border rounded focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                              placeholder="Min"
+                              value={activeFilters.priceMin}
+                              onChange={(e) => setActiveFilters(prev => ({
+                                ...prev,
+                                priceMin: e.target.value
+                              }))}
+                              min={filter.min}
+                              max={filter.max}
+                            />
+                            <span>-</span>
+                            <input
+                              type="number"
+                              className="w-24 h-8 px-2 border rounded focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                              placeholder="Max"
+                              value={activeFilters.priceMax}
+                              onChange={(e) => setActiveFilters(prev => ({
+                                ...prev,
+                                priceMax: e.target.value
+                              }))}
+                              min={filter.min}
+                              max={filter.max}
+                            />
+                          </div>
+                        </div>
+                      ) : filter.type === 'range' && (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              className="w-24 h-8 px-2 border rounded focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                              placeholder="Min"
+                              min={filter.min}
+                              max={filter.max}
+                            />
+                            <span>-</span>
+                            <input
+                              type="number"
+                              className="w-24 h-8 px-2 border rounded focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                              placeholder="Max"
+                              min={filter.min}
+                              max={filter.max}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {filter.type === 'radio' && (
+                        <div className="space-y-2">
+                          {filter.options?.map((option) => (
+                            <label key={option.value} className="flex items-center">
+                              <input
+                                type="radio"
+                                name={filter.field}
+                                className="form-radio h-4 w-4 text-emerald-600"
+                                checked={activeFilters[filter.field] === option.value}
+                                onChange={(e) => handleFilterChange(filter.field, option.value, e.target.checked)}
+                              />
+                              <span className="ml-2 text-sm">{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </select>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-md ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-gray-100'}`}
-                  >
-                    <i className="fas fa-th"></i>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-gray-100'}`}
-                  >
-                    <i className="fas fa-list"></i>
-                  </button>
                 </div>
               </div>
-              <div className="text-gray-600">
-                {sortedPackages.length} packages found
-              </div>
-            </div>
 
-            {/* Package Cards */}
-            <div className={`grid gap-6 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-1 md:grid-cols-2' 
-                : 'grid-cols-1'
-            }`}>
-              {sortedPackages.map((pkg) => (
-                <PackageCard
-                  key={pkg.id}
-                  {...pkg}
-                  viewMode={viewMode}
-                />
-              ))}
-            </div>
-            
-            {sortedPackages.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-gray-400 mb-4">
-                  <i className="fas fa-search text-6xl"></i>
-                </div>
-                <h3 className="text-xl font-medium text-gray-800 mb-2">No packages found</h3>
-                <p className="text-gray-600">Try adjusting your search criteria</p>
+              {/* Results */}
+              <div className="flex-1">
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading packages...</p>
+                  </div>
+                ) : packages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600">No packages found matching your criteria.</p>
+                  </div>
+                ) : (
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'space-y-4'}>
+                    {packages.map((pkg) => (
+                      <PackageCard
+                        key={pkg.id}
+                        {...pkg}
+                        viewMode={viewMode}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

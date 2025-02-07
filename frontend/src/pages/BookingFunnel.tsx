@@ -7,7 +7,7 @@ import {
   useElements, 
   PaymentElement
 } from '@stripe/react-stripe-js';
-import DatePicker from 'react-datepicker';
+
 import "react-datepicker/dist/react-datepicker.css";
 import { useAppContext } from '../contexts/AppContext';
 import { loginWithGoogle } from '../appwrite';
@@ -17,78 +17,82 @@ import Footer from '../components/Footer';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
 const BookingFunnel = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { isLoggedIn } = useAppContext();
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [guests, setGuests] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'full' | 'monthly'>('full');
-  const [package_data, setPackageData] = useState<any>(null);
-  const [clientSecret, setClientSecret] = useState('');
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const { id } = useParams(); // Get package ID from URL parameters
+  const navigate = useNavigate(); // Hook to programmatically navigate
+  const location = useLocation(); // Hook to access location object
+  const { isLoggedIn } = useAppContext(); // Get authentication status from context
+  const [startDate, setStartDate] = useState<Date | null>(null); // State for start date
+  const [endDate, setEndDate] = useState<Date | null>(null); // State for end date
+  const [guests, setGuests] = useState(1); // State for number of guests
+  const [paymentMethod, setPaymentMethod] = useState<'full' | 'monthly'>('full'); // State for payment method
+  const [package_data, setPackageData] = useState<any>(null); // State for package data
+  const [clientSecret, setClientSecret] = useState(''); // State for Stripe client secret
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false); // State for payment processing status
 
+  // Effect to load package data from location state
   useEffect(() => {
     if (location.state) {
       const { startDate, endDate, guests, package_data } = location.state;
-      setStartDate(new Date(startDate));
-      setEndDate(new Date(endDate));
-      setGuests(guests);
-      setPackageData(package_data);
+      setStartDate(new Date(startDate)); // Set start date
+      setEndDate(new Date(endDate)); // Set end date
+      setGuests(guests); // Set number of guests
+      setPackageData(package_data); // Set package data
     } else {
       // If no state is passed, redirect back to package details
       navigate(`/packages/${id}`);
     }
   }, [location.state, id, navigate]);
 
-  // Handle authenticated state
+  // Effect to handle authenticated state
   useEffect(() => {
     if (isLoggedIn) {
-      // Continue with payment processing instead of immediate success
       console.log('User authenticated, ready for payment processing');
       // TODO: Implement payment processing flow
     }
   }, [isLoggedIn]);
 
+  // Function to handle Google sign-in
   const handleGoogleSignIn = async () => {
     try {
-      await loginWithGoogle();
+      await loginWithGoogle(); // Call login function
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      console.error('Google sign-in error:', error); // Log any errors
     }
   };
 
+  // Function to calculate total cost
   const calculateTotal = () => {
-    if (!startDate || !endDate || !package_data) return null;
-    const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const subtotal = package_data.price * nights;
-    const taxes = Math.round(subtotal * 0.05); // 5% tax rate
+    if (!startDate || !endDate || !package_data) return null; // Return null if data is missing
+    const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)); // Calculate number of nights
+    const subtotal = package_data.price * nights; // Calculate subtotal
+    const taxes = Math.round(subtotal * 0.05); // Calculate taxes (5% tax rate)
     return {
       subtotal,
       cleaning_fee: package_data.cleaning_fee,
       service_fee: package_data.service_fee,
       taxes,
-      total: subtotal + package_data.cleaning_fee + package_data.service_fee + taxes
+      total: subtotal + package_data.cleaning_fee + package_data.service_fee + taxes // Calculate total
     };
   };
 
+  // Function to format date
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // Format date
   };
 
+  // Return loading state if package data is not available
   if (!package_data) {
     return <div>Loading...</div>;
   }
 
-  const total = calculateTotal();
+  const total = calculateTotal(); // Calculate total cost
 
   // Function to create payment intent
   const createPaymentIntent = async () => {
-    if (!total) return;
+    if (!total) return; // Exit if total is not available
     
     try {
-      setIsProcessingPayment(true);
+      setIsProcessingPayment(true); // Set processing state to true
       console.log('Creating payment intent with data:', {
         amount: total.total,
         currency: 'usd',
@@ -121,31 +125,46 @@ const BookingFunnel = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json(); // Parse response data
       console.log('Payment intent response:', data);
-      setClientSecret(data.clientSecret);
+      setClientSecret(data.clientSecret); // Set client secret for Stripe
     } catch (error) {
-      console.error('Error creating payment intent:', error);
+      console.error('Error creating payment intent:', error); // Log any errors
     } finally {
-      setIsProcessingPayment(false);
+      setIsProcessingPayment(false); // Reset processing state
     }
   };
 
+  // Function to handle continue button click
   const handleContinue = async () => {
     console.log('Handle continue clicked. isLoggedIn:', isLoggedIn);
     if (!isLoggedIn) {
-      // If not logged in, show authentication options
       const authSection = document.getElementById('auth-section');
       if (authSection) {
         authSection.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      // If logged in, create payment intent
       console.log('Creating payment intent...');
       await createPaymentIntent();
     }
   };
 
+  // Function to handle successful payment
+  const handlePaymentSuccess = () => {
+    navigate('/booking-confirmation', {
+      state: {
+        package_data,
+        booking_details: {
+          startDate,
+          endDate,
+          guests,
+          total
+        }
+      }
+    });
+  };
+
+  // Define Stripe appearance
   const appearance: Appearance = {
     theme: 'stripe',
     variables: {
@@ -158,7 +177,7 @@ const BookingFunnel = () => {
       <div className="py-8">
         <div className="max-w-5xl mx-auto px-4">
           <button 
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(-1)} // Navigate back
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
           >
             <i className="fas fa-chevron-left"></i>
@@ -195,7 +214,7 @@ const BookingFunnel = () => {
                     </p>
                   </div>
                   <button 
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate(-1)} // Edit button to go back
                     className="text-primary underline font-medium"
                   >
                     Edit
@@ -208,7 +227,7 @@ const BookingFunnel = () => {
                     <p className="text-gray-600">{guests} {guests === 1 ? 'guest' : 'guests'}</p>
                   </div>
                   <button 
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate(-1)} // Edit button to go back
                     className="text-primary underline font-medium"
                   >
                     Edit
@@ -231,7 +250,7 @@ const BookingFunnel = () => {
                         type="radio"
                         name="payment"
                         checked={paymentMethod === 'full'}
-                        onChange={() => setPaymentMethod('full')}
+                        onChange={() => setPaymentMethod('full')} // Set payment method to full
                         className="text-primary"
                       />
                     </div>
@@ -250,7 +269,7 @@ const BookingFunnel = () => {
                         type="radio"
                         name="payment"
                         checked={paymentMethod === 'monthly'}
-                        onChange={() => setPaymentMethod('monthly')}
+                        onChange={() => setPaymentMethod('monthly')} // Set payment method to monthly
                         className="text-primary"
                       />
                     </div>
@@ -287,10 +306,11 @@ const BookingFunnel = () => {
                     </p>
 
                     <button
-                      onClick={handleContinue}
+                      onClick={handleContinue} // Continue button to handle payment
                       className="w-full h-12 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors"
+                      disabled={isProcessingPayment} // Disable button if processing payment
                     >
-                      Continue
+                      {isProcessingPayment ? 'Processing...' : 'Continue'} // Change button text based on processing state
                     </button>
 
                     <div className="relative text-center my-6">
@@ -308,7 +328,7 @@ const BookingFunnel = () => {
                         <span>Continue with Facebook</span>
                       </button>
                       <button 
-                        onClick={handleGoogleSignIn}
+                        onClick={handleGoogleSignIn} // Google sign-in button
                         className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50"
                       >
                         <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -335,7 +355,7 @@ const BookingFunnel = () => {
                       You're logged in and ready to proceed with payment.
                     </p>
                     <button
-                      onClick={handleContinue}
+                      onClick={handleContinue} // Continue button to handle payment
                       className="w-full h-12 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors"
                     >
                       Continue to Payment
@@ -420,19 +440,7 @@ const BookingFunnel = () => {
                 startDate={startDate}
                 endDate={endDate}
                 guests={guests}
-                onSuccess={() => {
-                  navigate('/booking-confirmation', {
-                    state: {
-                      package_data,
-                      booking_details: {
-                        startDate,
-                        endDate,
-                        guests,
-                        total
-                      }
-                    }
-                  });
-                }}
+                onSuccess={handlePaymentSuccess}
                 onCancel={() => setClientSecret('')}
               />
             </Elements>
@@ -455,8 +463,7 @@ interface PaymentFormProps {
 
 // Payment Form Component
 const PaymentForm: React.FC<PaymentFormProps> = ({ 
-  amount, 
-  onSuccess, 
+  amount,  
   onCancel,
   packageId,
   startDate,
