@@ -1,0 +1,20 @@
+node_modules/
+**/node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.*.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.e2e
+.env.e2e.local
