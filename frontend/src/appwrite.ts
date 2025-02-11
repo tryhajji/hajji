@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Teams, ID, Models } from 'appwrite';
+import { Client, Account, Databases, Teams, ID, Models, OAuthProvider } from 'appwrite';
 
 const client = new Client();
 
@@ -121,7 +121,7 @@ export const logout = async () => {
 export const loginWithGoogle = async () => {
     try {
         await account.createOAuth2Session(
-            'google',
+            OAuthProvider.Google,
             `${window.location.origin}/auth-callback`,
             `${window.location.origin}/auth-callback?error=true`
         );

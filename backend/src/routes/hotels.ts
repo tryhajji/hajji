@@ -98,6 +98,10 @@ router.post(
       return res.status(400).json({ message: "Hotel not found" });
     }
 
+    if (!req.userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
     const totalCost = hotel.pricePerNight * numberOfNights;
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -105,7 +109,7 @@ router.post(
       currency: "gbp",
       metadata: {
         hotelId,
-        userId: req.userId,
+        userId: req.userId.toString()
       },
     });
 

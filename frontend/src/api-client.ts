@@ -7,11 +7,30 @@ import {
   UserType,
 } from "../../backend/src/shared/types";
 import { BookingFormData } from "./forms/BookingForm/BookingForm";
+import { account } from './appwrite';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
+// Helper function to get headers with Appwrite session
+const getHeaders = async (): Promise<Record<string, string>> => {
+  try {
+    const session = await account.getSession('current');
+    return {
+      'Content-Type': 'application/json',
+      'x-appwrite-session': session.$id
+    };
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return {
+      'Content-Type': 'application/json'
+    };
+  }
+};
+
 export const fetchCurrentUser = async (): Promise<UserType> => {
-  const response = await fetch(`${API_BASE_URL}/api/users/me`, {
-    credentials: "include",
+  const headers = await getHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    headers
   });
   if (!response.ok) {
     throw new Error("Error fetching user");
@@ -53,13 +72,14 @@ export const signIn = async (formData: SignInFormData) => {
   return body;
 };
 
-export const validateToken = async () => {
-  const response = await fetch(`${API_BASE_URL}/api/auth/validate-token`, {
-    credentials: "include",
+export const validateSession = async () => {
+  const headers = await getHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/auth/validate-session`, {
+    headers
   });
 
   if (!response.ok) {
-    throw new Error("Token invalid");
+    throw new Error("Session invalid");
   }
 
   return response.json();
@@ -77,9 +97,15 @@ export const signOut = async () => {
 };
 
 export const addMyHotel = async (hotelFormData: FormData) => {
+  const baseHeaders = await getHeaders();
+  // Remove Content-Type for FormData
+  const { 'Content-Type': _, ...headers } = baseHeaders;
+  
   const response = await fetch(`${API_BASE_URL}/api/my-hotels`, {
     method: "POST",
-    credentials: "include",
+    headers: {
+      'x-appwrite-session': headers['x-appwrite-session']
+    },
     body: hotelFormData,
   });
 
@@ -91,8 +117,9 @@ export const addMyHotel = async (hotelFormData: FormData) => {
 };
 
 export const fetchMyHotels = async (): Promise<HotelType[]> => {
+  const headers = await getHeaders();
   const response = await fetch(`${API_BASE_URL}/api/my-hotels`, {
-    credentials: "include",
+    headers
   });
 
   if (!response.ok) {
@@ -103,8 +130,9 @@ export const fetchMyHotels = async (): Promise<HotelType[]> => {
 };
 
 export const fetchMyHotelById = async (hotelId: string): Promise<HotelType> => {
+  const headers = await getHeaders();
   const response = await fetch(`${API_BASE_URL}/api/my-hotels/${hotelId}`, {
-    credentials: "include",
+    headers
   });
 
   if (!response.ok) {

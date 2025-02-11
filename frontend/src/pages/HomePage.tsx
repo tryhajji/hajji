@@ -61,35 +61,46 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-black">
       {/* Hero Section */}
-      <div className="relative h-[500px]">
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          <img 
-            src="images/kaaba.jpg"
-            alt="Kaaba" 
-            className="w-full h-full object-cover"
-          />
-          {/* Dark Overlay */}
-          <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+      <div className="relative h-[500px] bg-black">
+        {/* Background Image Container with max width and center alignment */}
+        <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-screen-2xl h-full">
+          {/* Inner container for maintaining aspect ratio */}
+          <div className="relative h-full mx-auto overflow-hidden">
+            <img 
+              src="images/kaaba.jpg"
+              alt="Kaaba" 
+              className="absolute w-full h-full object-cover object-center scale-125"
+              style={{
+                objectPosition: '50% 45%'
+              }}
+            />
+            {/* Gradient overlays */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/50"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black"></div>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="relative z-10 container mx-auto px-4 pt-16">
-          <h1 className="text-5xl font-bold text-white mb-4 max-w-2xl">
-            Find your perfect pilgrimage package
-          </h1>
-          <p className="text-xl text-white mb-8 opacity-90 max-w-2xl">
-            Whether it's a spiritual journey to Mecca or a blessed visit to Medina, we've got you covered.
-          </p>
+        <div className="relative z-10 container mx-auto px-4 h-full flex flex-col">
+          <div className="mt-24">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3 max-w-2xl">
+              Find your perfect pilgrimage package
+            </h1>
+            <p className="text-lg sm:text-xl text-white mb-8 opacity-90 max-w-2xl">
+              Whether it's a spiritual journey to Mecca or a blessed visit to Medina, we've got you covered.
+            </p>
+          </div>
         </div>
+      </div>
 
-        {/* Search Form */}
-        <div className="absolute left-0 right-0 bottom-0 transform translate-y-1/2 z-20">
-          <div className="container mx-auto px-4">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex flex-wrap gap-2">
+      {/* Floating Search Form */}
+      <div className="relative z-20 -mt-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white rounded-3xl shadow-2xl shadow-black/20 p-4 border-[6px] border-primary hover:shadow-2xl hover:shadow-black/30 transition-shadow duration-300">
+              <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex flex-wrap gap-3">
                 <SearchBox label="Journey Type">
                   <select
                     value={tripType}
@@ -189,125 +200,127 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Featured Packages */}
-      <div className="container mx-auto px-4 pt-40 pb-12">
-        <h2 className="text-2xl font-semibold mb-6">Featured Packages</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Premium Hajj Package */}
-          <Link to="/packages/premium-hajj" className="group">
-            <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
-              <img
-                src="/images/mecca.jpg"
-                alt="Premium Hajj Package"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              <div className="absolute top-2 right-2 bg-gold text-white text-xs px-2 py-1 rounded">
-                Premium
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex justify-between items-start">
-                <h3 className="font-semibold">Premium Hajj Package</h3>
-                <div className="flex items-center">
-                  <i className="fas fa-star text-primary text-sm mr-1"></i>
-                  <span className="text-sm">4.9</span>
+      {/* Featured Packages Section - Added padding top for search form overlap */}
+      <div className="bg-white">
+        <div className="container mx-auto px-4 pt-16 pb-16">
+          <h2 className="text-2xl font-semibold mb-6">Featured Packages</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Premium Hajj Package */}
+            <Link to="/packages/premium-hajj" className="group">
+              <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
+                <img
+                  src="/images/mecca.jpg"
+                  alt="Premium Hajj Package"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute top-2 right-2 bg-gold text-white text-xs px-2 py-1 rounded">
+                  Premium
                 </div>
               </div>
-              <p className="text-gray-500 text-sm">Mecca, Saudi Arabia</p>
-              <p className="text-gray-500 text-sm">15 days (June 1-15, 2025)</p>
-              <p className="mt-1">
-                <span className="font-semibold">$8,999</span>
-                <span className="text-gray-500"> fixed package</span>
-              </p>
-            </div>
-          </Link>
+              <div className="flex flex-col">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-semibold">Premium Hajj Package</h3>
+                  <div className="flex items-center">
+                    <i className="fas fa-star text-primary text-sm mr-1"></i>
+                    <span className="text-sm">4.9</span>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm">Mecca, Saudi Arabia</p>
+                <p className="text-gray-500 text-sm">15 days (June 1-15, 2025)</p>
+                <p className="mt-1">
+                  <span className="font-semibold">$8,999</span>
+                  <span className="text-gray-500"> fixed package</span>
+                </p>
+              </div>
+            </Link>
 
-          {/* Standard Umrah Package */}
-          <Link to="/packages/standard-umrah" className="group">
-            <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
-              <img
-                src="/images/medina.jpg"
-                alt="Standard Umrah Package"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              <div className="absolute top-2 right-2 bg-emerald-500 text-white text-xs px-2 py-1 rounded">
-                Popular
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex justify-between items-start">
-                <h3 className="font-semibold">Standard Umrah Package</h3>
-                <div className="flex items-center">
-                  <i className="fas fa-star text-primary text-sm mr-1"></i>
-                  <span className="text-sm">4.7</span>
+            {/* Standard Umrah Package */}
+            <Link to="/packages/standard-umrah" className="group">
+              <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
+                <img
+                  src="/images/medina.jpg"
+                  alt="Standard Umrah Package"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute top-2 right-2 bg-emerald-500 text-white text-xs px-2 py-1 rounded">
+                  Popular
                 </div>
               </div>
-              <p className="text-gray-500 text-sm">Medina, Saudi Arabia</p>
-              <p className="text-gray-500 text-sm">Flexible Duration</p>
-              <p className="mt-1">
-                <span className="font-semibold">$200</span>
-                <span className="text-gray-500"> per day</span>
-              </p>
-            </div>
-          </Link>
+              <div className="flex flex-col">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-semibold">Standard Umrah Package</h3>
+                  <div className="flex items-center">
+                    <i className="fas fa-star text-primary text-sm mr-1"></i>
+                    <span className="text-sm">4.7</span>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm">Medina, Saudi Arabia</p>
+                <p className="text-gray-500 text-sm">Flexible Duration</p>
+                <p className="mt-1">
+                  <span className="font-semibold">$200</span>
+                  <span className="text-gray-500"> per day</span>
+                </p>
+              </div>
+            </Link>
 
-          {/* Group Hajj Package */}
-          <Link to="/packages/group-hajj" className="group">
-            <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
-              <img
-                src="/images/group.jpg"
-                alt="Group Hajj Package"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                Group
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex justify-between items-start">
-                <h3 className="font-semibold">Group Hajj Package</h3>
-                <div className="flex items-center">
-                  <i className="fas fa-star text-primary text-sm mr-1"></i>
-                  <span className="text-sm">4.8</span>
+            {/* Group Hajj Package */}
+            <Link to="/packages/group-hajj" className="group">
+              <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
+                <img
+                  src="/images/group.jpg"
+                  alt="Group Hajj Package"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                  Group
                 </div>
               </div>
-              <p className="text-gray-500 text-sm">Mecca & Medina</p>
-              <p className="text-gray-500 text-sm">21 days (June 1-21, 2025)</p>
-              <p className="mt-1">
-                <span className="font-semibold">$7,499</span>
-                <span className="text-gray-500"> fixed package</span>
-              </p>
-            </div>
-          </Link>
+              <div className="flex flex-col">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-semibold">Group Hajj Package</h3>
+                  <div className="flex items-center">
+                    <i className="fas fa-star text-primary text-sm mr-1"></i>
+                    <span className="text-sm">4.8</span>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm">Mecca & Medina</p>
+                <p className="text-gray-500 text-sm">21 days (June 1-21, 2025)</p>
+                <p className="mt-1">
+                  <span className="font-semibold">$7,499</span>
+                  <span className="text-gray-500"> fixed package</span>
+                </p>
+              </div>
+            </Link>
 
-          {/* Deluxe Umrah Package */}
-          <Link to="/packages/deluxe-umrah" className="group">
-            <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
-              <img
-                src="/images/deluxe.jpg"
-                alt="Deluxe Umrah Package"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
-                Luxury
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex justify-between items-start">
-                <h3 className="font-semibold">Deluxe Umrah Package</h3>
-                <div className="flex items-center">
-                  <i className="fas fa-star text-primary text-sm mr-1"></i>
-                  <span className="text-sm">5.0</span>
+            {/* Deluxe Umrah Package */}
+            <Link to="/packages/deluxe-umrah" className="group">
+              <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
+                <img
+                  src="/images/deluxe.jpg"
+                  alt="Deluxe Umrah Package"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
+                  Luxury
                 </div>
               </div>
-              <p className="text-gray-500 text-sm">Mecca & Medina</p>
-              <p className="text-gray-500 text-sm">Flexible Duration</p>
-              <p className="mt-1">
-                <span className="font-semibold">$300</span>
-                <span className="text-gray-500"> per day</span>
-              </p>
-            </div>
-          </Link>
+              <div className="flex flex-col">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-semibold">Deluxe Umrah Package</h3>
+                  <div className="flex items-center">
+                    <i className="fas fa-star text-primary text-sm mr-1"></i>
+                    <span className="text-sm">5.0</span>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm">Mecca & Medina</p>
+                <p className="text-gray-500 text-sm">Flexible Duration</p>
+                <p className="mt-1">
+                  <span className="font-semibold">$300</span>
+                  <span className="text-gray-500"> per day</span>
+                </p>
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
       <Footer />

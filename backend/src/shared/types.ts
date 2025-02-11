@@ -1,13 +1,25 @@
-export type UserType = {
-  _id: string;
+import { Document } from 'mongoose';
+
+export interface UserType extends Document {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
-};
+}
 
-export type HotelType = {
-  _id: string;
+export interface HotelBookingType {
+  firstName: string;
+  lastName: string;
+  email: string;
+  adultCount: number;
+  childCount: number;
+  checkIn: Date;
+  checkOut: Date;
+  userId: string;
+  totalCost: number;
+}
+
+export interface HotelType extends Document {
   userId: string;
   name: string;
   city: string;
@@ -21,33 +33,29 @@ export type HotelType = {
   starRating: number;
   imageUrls: string[];
   lastUpdated: Date;
-  bookings: BookingType[];
-};
+  bookings: HotelBookingType[];
+}
 
-export type BookingType = {
-  _id: string;
-  userId: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  adultCount: number;
-  childCount: number;
-  checkIn: Date;
-  checkOut: Date;
-  totalCost: number;
-};
-
-export type HotelSearchResponse = {
+export interface HotelSearchResponse {
   data: HotelType[];
   pagination: {
     total: number;
     page: number;
     pages: number;
   };
-};
+}
 
-export type PaymentIntentResponse = {
-  paymentIntentId: string;
-  clientSecret: string;
+export interface BookingType extends Document {
+  userId: string;
+  hotelId?: string;
+  packageId?: string;
+  checkIn: Date;
+  checkOut: Date;
+  numberOfGuests: number;
   totalCost: number;
-};
+  status: string;
+  paymentIntentId?: string;
+  bookingType: 'HOTEL' | 'PACKAGE';
+  createdAt: Date;
+  updatedAt: Date;
+} 

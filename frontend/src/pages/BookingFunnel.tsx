@@ -12,6 +12,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useAppContext } from '../contexts/AppContext';
 import { loginWithGoogle } from '../appwrite';
 import Footer from '../components/Footer';
+import { account } from '../appwrite';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
@@ -89,6 +90,23 @@ const BookingFunnel = () => {
     
     try {
       setIsProcessingPayment(true);
+      
+      // Get current session
+      let session;
+      try {
+        session = await account.getSession('current');
+        if (!session) {
+          throw new Error('No active session found');
+        }
+        console.log('Got session:', session);
+      } catch (error) {
+        console.error('Session error:', error);
+        throw new Error('Please sign in again to continue');
+      }
+
+      // Format the session ID to include user ID
+      const sessionHeader = `${session.userId}.${session.$id}`;
+
       console.log('Creating payment intent with data:', {
         amount: total.total,
         currency: 'usd',
@@ -102,11 +120,13 @@ const BookingFunnel = () => {
         }
       });
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-payment-intent`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-appwrite-session': sessionHeader
         },
+        credentials: 'include',
         body: JSON.stringify({
           amount: total.total,
           currency: 'usd',
@@ -116,16 +136,23 @@ const BookingFunnel = () => {
             start_date: startDate?.toISOString(),
             end_date: endDate?.toISOString(),
             guests: guests,
-            payment_method: paymentMethod
+            payment_method: paymentMethod,
+            userId: session.userId
           }
         }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create payment intent');
+      }
 
       const data = await response.json();
       console.log('Payment intent response:', data);
       setClientSecret(data.clientSecret);
     } catch (error) {
       console.error('Error creating payment intent:', error);
+      alert(error instanceof Error ? error.message : 'Failed to process payment');
     } finally {
       setIsProcessingPayment(false);
     }
@@ -467,6 +494,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const elements = useElements();
   const [error, setError] = useState('');
   const [processing, setProcessing] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -482,24 +510,33 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         return;
       }
 
-      const { error: confirmError } = await stripe.confirmPayment({
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
+        redirect: 'if_required',
         confirmParams: {
-          return_url: `${window.location.origin}/booking-confirmation?${new URLSearchParams({
-            success: 'true',
-            package_id: packageId,
-            start_date: startDate?.toISOString() || '',
-            end_date: endDate?.toISOString() || '',
-            guests: String(guests),
-            total_amount: String(amount)
-          })}`,
+          return_url: `${window.location.origin}/booking-confirmation`,
         },
       });
 
       if (confirmError) {
         setError(confirmError.message || 'Payment failed');
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Payment successful, navigate to confirmation
+        onSuccess();
+        navigate('/booking-confirmation', {
+          state: {
+            paymentIntentId: paymentIntent.id,
+            packageId,
+            startDate: startDate?.toISOString(),
+            endDate: endDate?.toISOString(),
+            guests,
+            totalAmount: amount,
+            success: true
+          }
+        });
       }
     } catch (err) {
+      console.error('Payment error:', err);
       setError('An unexpected error occurred');
     } finally {
       setProcessing(false);
@@ -507,7 +544,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement />
       {error && (
         <div className="text-red-500 text-sm mt-2">{error}</div>
@@ -526,7 +563,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           disabled={!stripe || processing}
           className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:bg-gray-400"
         >
-          {processing ? 'Processing...' : `Pay ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}
+          {processing ? (
+            <div className="flex items-center space-x-2">
+              <span>Processing...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            </div>
+          ) : (
+            `Pay ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`
+          )}
         </button>
       </div>
     </form>

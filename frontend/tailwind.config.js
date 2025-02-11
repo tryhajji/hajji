@@ -20,7 +20,19 @@ export default {
           md: "10rem",
         },
       },
+      transitionProperty: {
+        'width': 'width',
+        'spacing': 'margin, padding',
+      }
     },
   },
   plugins: [],
+  variants: {
+    extend: {
+      backgroundColor: ['active', 'group-hover'],
+      textColor: ['active', 'group-hover'],
+      transform: ['group-hover'],
+      scale: ['group-hover'],
+    },
+  },
 };

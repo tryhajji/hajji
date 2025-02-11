@@ -1,25 +1,28 @@
-const createPaymentIntent = async () => {
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/create-payment-intent`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Include any other necessary headers like Authorization if needed
-      },
-      credentials: 'include', // if you're using cookies
-      body: JSON.stringify({
-        // your payment data
-      })
+import { useBookingSocket } from '../hooks/useBookingSocket';
+import { useToast } from '../hooks/useToast'; // Assuming you have a toast system
+
+export const BookingFunnel = () => {
+  const { subscribeToBookingUpdates } = useBookingSocket();
+  const toast = useToast();
+
+  useEffect(() => {
+    const unsubscribe = subscribeToBookingUpdates((data) => {
+      // Update local state based on booking status
+      if (data.type === 'BOOKING_UPDATE') {
+        toast({
+          title: 'Booking Updated',
+          description: `Your booking for ${data.booking.packageName} is now ${data.booking.status}`,
+          status: 'info'
+        });
+        
+        // Update your local state/UI here
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    return () => {
+      unsubscribe();
+    };
+  }, [subscribeToBookingUpdates]);
 
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    throw error;
-  }
+  // ... rest of your component
 }; 

@@ -2,10 +2,12 @@ import express, { Request, Response } from "express";
 import { param, validationResult } from "express-validator";
 import verifyToken from "../middleware/auth";
 import Booking from "../models/booking";
+import Package from "../models/package";
 import Stripe from "stripe";
+import { cacheMiddleware } from '../middleware/cache';
+import { clearCache } from '../middleware/cache';
 
 const stripe = new Stripe(process.env.STRIPE_API_KEY as string);
-
 const router = express.Router();
 
 // Mock data for now - you'll want to replace this with your database
@@ -44,14 +46,17 @@ router.get(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const id = req.params.id.toString();
-    const package_data = packages.find(p => p.id === id);
+    try {
+      const package_data = await Package.findById(req.params.id);
 
-    if (!package_data) {
-      return res.status(404).json({ message: "Package not found" });
+      if (!package_data) {
+        return res.status(404).json({ message: "Package not found" });
+      }
+
+      res.json(package_data);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching package" });
     }
-
-    res.json(package_data);
   }
 );
 
@@ -67,6 +72,12 @@ router.post(
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       if (paymentIntent.status !== 'succeeded') {
         return res.status(400).json({ message: 'Payment not successful' });
+      }
+
+      // Verify package exists
+      const package_data = await Package.findById(packageId);
+      if (!package_data) {
+        return res.status(404).json({ message: 'Package not found' });
       }
 
       // Create booking
@@ -96,23 +107,40 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const bookings = await Booking.find({ userId: req.userId })
+        .populate('packageId')  // Populate package details
         .sort({ bookingDate: -1 }); // Most recent first
 
-      // Enhance bookings with package details
-      const enhancedBookings = bookings.map(booking => {
-        const package_data = packages.find(p => p.id === booking.packageId);
-        return {
-          ...booking.toObject(),
-          package_data
-        };
-      });
-
-      res.json(enhancedBookings);
+      res.json(bookings);
     } catch (error) {
       console.error('Error fetching bookings:', error);
       res.status(500).json({ message: 'Error fetching bookings' });
     }
   }
 );
+
+// Get all packages
+router.get('/', cacheMiddleware, async (req: Request, res: Response) => {
+  try {
+    const packages = await Package.find();
+    res.json(packages);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching packages' });
+  }
+});
+
+// Create new package
+router.post('/', verifyToken, async (req: Request, res: Response) => {
+  try {
+    const newPackage = await Package.create(req.body);
+    // Clear the packages cache
+    await clearCache('/api/packages*');
+    res.status(201).json(newPackage);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating package' });
+  }
+});
+
+// Similar for update and delete routes
+// ... rest of your routes
 
 export default router; 
