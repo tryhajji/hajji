@@ -15,8 +15,8 @@ const account = new Account(client);
 // Get current user
 router.get('/me', verifyAppwriteToken, async (req: Request, res: Response) => {
   try {
-    if (!req.userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get user details from Appwrite
@@ -24,8 +24,8 @@ router.get('/me', verifyAppwriteToken, async (req: Request, res: Response) => {
     
     return res.status(200).json({
       user: {
-        id: user.$id,
-        email: user.email,
+        id: req.user.uid,
+        email: req.user.email,
         name: user.name,
         prefs: user.prefs
       }
@@ -38,7 +38,13 @@ router.get('/me', verifyAppwriteToken, async (req: Request, res: Response) => {
 
 // Validate session
 router.get("/validate-session", verifyAppwriteToken, (req: Request, res: Response) => {
-  res.status(200).json({ userId: req.userId });
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = req.user.uid;
+
+  res.status(200).json({ userId });
 });
 
 // Note: Login/Register are handled on the frontend with Appwrite SDK

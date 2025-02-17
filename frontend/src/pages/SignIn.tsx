@@ -1,28 +1,59 @@
 import { useForm } from "react-hook-form";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAppContext } from "../contexts/AppContext";
-import * as apiClient from "../api-client";
-import { loginWithGoogle } from "../appwrite";
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider, db } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { UserData } from '../firebase';
+
+interface SignInFormData {
+  email: string;
+  password: string;
+}
 
 const SignIn = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const { register, handleSubmit, formState: { errors } } = useForm<SignInFormData>();
   const { handleSignIn } = useAppContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const error = searchParams.get('error');
 
-  const onSubmit = async (data: any) => {
-    const response = await apiClient.signIn(data);
-    if (response) {
-      handleSignIn(response);
-      navigate("/");
+  const onSubmit = async (data: SignInFormData) => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      
+      if (userDoc.exists()) {
+        handleSignIn(userDoc.data() as UserData);
+        navigate("/");
+      } else {
+        console.error('User document not found');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
-      await loginWithGoogle();
-      // The redirect will happen automatically
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Create or update user document in Firestore
+      const userData: UserData = {
+        uid: user.uid,
+        email: user.email || '',
+        firstName: user.displayName?.split(' ')[0] || '',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        role: 'user'
+      };
+
+      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+      
+      // Important: Call handleSignIn to update the app context
+      handleSignIn(userData);
+      
+      navigate('/');
     } catch (error) {
       console.error('Google login error:', error);
     }

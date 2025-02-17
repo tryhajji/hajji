@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import stripe from '../config/stripe';
 import verifyAppwriteSession from '../middleware/auth';
 import cors from 'cors';
@@ -20,19 +20,19 @@ router.options('/create-payment-intent', (req, res) => {
   res.sendStatus(200);
 });
 
-router.post('/create-payment-intent', verifyAppwriteSession, async (req, res) => {
+router.post('/create-payment-intent', verifyAppwriteSession, async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      console.log('No user found in request');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
     console.log('Payment intent request received:', {
       body: req.body,
-      userId: req.userId,
+      userId: req.user.uid,
       headers: req.headers
     });
     
-    if (!req.userId) {
-      console.log('No user ID found in request');
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
     const { amount, currency = 'usd', metadata = {} } = req.body;
 
     if (!amount) {
@@ -43,7 +43,7 @@ router.post('/create-payment-intent', verifyAppwriteSession, async (req, res) =>
     console.log('Creating Stripe payment intent with:', {
       amount,
       currency,
-      userId: req.userId,
+      userId: req.user.uid,
       metadata
     });
 
@@ -55,7 +55,7 @@ router.post('/create-payment-intent', verifyAppwriteSession, async (req, res) =>
         enabled: true,
       },
       metadata: {
-        userId: req.userId,
+        userId: req.user.uid,
         ...metadata
       }
     });

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -48,14 +48,13 @@ const Navbar = () => {
       return 'Profile';
     }
 
-    if (user.name) {
-      return user.name;
+    if (user.firstName) {
+      return `${user.firstName} ${user.lastName || ''}`.trim();
     }
     
     // Fallback to email if name is not available
     if (user.email) {
       const username = user.email.split('@')[0];
-      // Capitalize first letter
       return username.charAt(0).toUpperCase() + username.slice(1);
     }
     
@@ -143,7 +142,7 @@ const Navbar = () => {
               {!!user ? (
                 <div className="flex items-center h-full space-x-2">
                   {/* Admin Menu */}
-                  {user?.prefs?.role === 'admin' && (
+                  {user?.role === 'admin' && (
                     <div className="relative h-full" ref={adminMenuRef}>
                       <button
                         onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}

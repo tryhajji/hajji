@@ -1,70 +1,65 @@
 import { Request, Response, NextFunction } from 'express';
-import { Client, Account, Users } from 'node-appwrite';
+import { auth } from 'firebase-admin';
+import { db } from '../config/firebase';
 
-// Initialize Appwrite client
-const client = new Client()
-  .setEndpoint(process.env.APPWRITE_ENDPOINT!)
-  .setProject(process.env.APPWRITE_PROJECT_ID!)
-  .setKey(process.env.APPWRITE_API_KEY!);
-
-const account = new Account(client);
-const users = new Users(client);
-
-// Extend Express Request type to include userId
+// Extend Express Request type to include user
 declare global {
   namespace Express {
     interface Request {
-      userId?: string;
+      user?: {
+        uid: string;
+        email: string;
+        role: string;
+        firstName: string;
+        lastName: string;
+      };
     }
   }
 }
 
-const verifyAppwriteSession = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('Headers received:', req.headers);
-    const sessionId = req.headers['x-appwrite-session'];
-    console.log('Session ID from headers:', sessionId);
-
-    if (!sessionId || typeof sessionId !== 'string') {
-      console.log('No session ID provided in headers');
-      return res.status(401).json({ error: 'No session ID provided' });
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
     }
 
-    try {
-      // Instead of verifying the session directly, let's try to get the user ID from the session
-      const [userId] = sessionId.split('.');
-      
-      if (!userId) {
-        console.log('Could not extract user ID from session');
-        return res.status(401).json({ error: 'Invalid session format' });
-      }
-
-      // Verify the user exists
-      try {
-        const user = await users.get(userId);
-        console.log('User verified:', user.$id);
-        
-        // If we get here, the user exists and is valid
-        req.userId = user.$id;
-        next();
-      } catch (userError) {
-        console.error('User verification error:', userError);
-        return res.status(401).json({ error: 'Invalid user' });
-      }
-    } catch (error) {
-      console.error('Session verification error:', error);
-      return res.status(401).json({ 
-        error: 'Invalid session',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+    const decodedToken = await auth().verifyIdToken(token);
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    const userData = userDoc.data();
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email || '',
+      role: userData?.role || 'user',
+      firstName: userData?.firstName || '',
+      lastName: userData?.lastName || ''
+    };
+
+    next();
   } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Auth error:', error);
+    return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
-export default verifyAppwriteSession;
+export const requireRole = (roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    next();
+  };
+};
+
+export default verifyAuth;

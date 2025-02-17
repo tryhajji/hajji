@@ -1,22 +1,23 @@
 import express, { Request, Response } from "express";
 import verifyToken from "../middleware/auth";
-import Hotel from "../models/hotel";
 import Booking from "../models/booking";
 import Package from "../models/package";
 import { bookingService, BookingStatus } from '../services/BookingService';
 import stripe from '../config/stripe';
-import { Types } from 'mongoose';
+import { verifyAppwriteToken } from '../middleware/verifyAppwriteToken';
 
 const router = express.Router();
 
 // Get all user's bookings (both hotel and package bookings)
-router.get("/", verifyToken, async (req: Request, res: Response) => {
+router.get("/", verifyAppwriteToken, async (req: Request, res: Response) => {
   try {
-    if (!req.userId) {
-      return res.status(401).json({ message: "User not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const bookings = await Booking.find({ userId: req.userId })
+    const userId = req.user.uid;
+
+    const bookings = await Booking.find({ userId })
       .populate('hotelId')
       .populate('packageId')
       .sort({ createdAt: -1 });
@@ -24,15 +25,15 @@ router.get("/", verifyToken, async (req: Request, res: Response) => {
     res.status(200).json(bookings);
   } catch (error) {
     console.error('Error fetching bookings:', error);
-    res.status(500).json({ message: "Unable to fetch bookings" });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // Create a new booking
 router.post("/create-booking", verifyToken, async (req: Request, res: Response) => {
   try {
-    if (!req.userId) {
-      return res.status(401).json({ message: "User not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     console.log('Creating booking with data:', req.body);
@@ -56,7 +57,7 @@ router.post("/create-booking", verifyToken, async (req: Request, res: Response) 
 
     // Create booking
     console.log('Creating booking object with:', {
-      userId: req.userId.toString(),
+      userId: req.user.uid,
       packageId,
       checkIn: new Date(startDate),
       checkOut: new Date(endDate),
@@ -68,7 +69,7 @@ router.post("/create-booking", verifyToken, async (req: Request, res: Response) 
     });
 
     const booking = new Booking({
-      userId: req.userId.toString(),
+      userId: req.user.uid,
       packageId,
       checkIn: new Date(startDate),
       checkOut: new Date(endDate),
@@ -108,8 +109,8 @@ router.post("/create-booking", verifyToken, async (req: Request, res: Response) 
 // Confirm payment for a booking
 router.post("/confirm-payment", verifyToken, async (req: Request, res: Response) => {
   try {
-    if (!req.userId) {
-      return res.status(401).json({ message: "User not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const { bookingId, paymentIntentId } = req.body;
@@ -122,7 +123,7 @@ router.post("/confirm-payment", verifyToken, async (req: Request, res: Response)
       const booking = await bookingService.updateBookingStatus(
         typeof bookingId === 'string' ? bookingId : bookingId.toString(),
         BookingStatus.PAYMENT_COMPLETED,
-        req.userId.toString()
+        req.user.uid
       );
 
       res.json({ success: true, booking });

@@ -1,7 +1,15 @@
-import bcrypt from 'bcryptjs';
 import User from '../models/user';
 import jwt from 'jsonwebtoken';
-import { UserType } from '../shared/types';
+import { Document, Types } from 'mongoose';
+
+interface UserDocument extends Document {
+  _id: Types.ObjectId;
+  email: string;
+  firstName: string;
+  lastName: string;
+  googleId?: string;
+  avatar?: string;
+}
 
 export class AuthService {
   private static readonly JWT_EXPIRY = '7d'; // Token expires in 7 days
@@ -17,7 +25,7 @@ export class AuthService {
   static async handleGoogleLogin(googleUser: any) {
     try {
       // Find existing user or create new one
-      let user = await User.findOne({ email: googleUser.email });
+      let user = await User.findOne({ email: googleUser.email }) as UserDocument;
       
       if (!user) {
         user = new User({
@@ -26,12 +34,12 @@ export class AuthService {
           lastName: googleUser.family_name,
           googleId: googleUser.sub,
           avatar: googleUser.picture
-        });
+        }) as UserDocument;
         await user.save();
       }
 
       // Generate JWT token
-      const token = this.generateToken(user._id);
+      const token = this.generateToken(user._id.toString());
       
       return {
         user: {

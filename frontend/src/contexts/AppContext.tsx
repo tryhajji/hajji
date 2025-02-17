@@ -1,34 +1,35 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Models } from 'appwrite';
-import { getCurrentUser, getUserRole, createUser } from "../appwrite";
+import { auth, db } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserData } from '../firebase';
 
 type ToastMessage = {
   message: string;
   type: "SUCCESS" | "ERROR";
 };
 
-export type UserRole = 'admin' | 'agency' | 'umrah_group' | 'user';
+export type UserRole = 'user' | 'admin' | 'agency' | 'umrah_group';
 
-export interface AppUser extends Models.User<Models.Preferences> {
-  role?: UserRole;
-}
-
-interface AppContext {
+interface AppContextType {
   showToast: (toastMessage: ToastMessage) => void;
   isLoggedIn: boolean;
-  user: AppUser | null;
+  user: UserData | null;
   userRole: UserRole | null;
-  handleSignIn: (user: AppUser) => Promise<void>;
+  handleSignIn: (userData: UserData) => void;
   handleSignOut: () => void;
   register: (userData: { 
+    uid: string;
     email: string;
     password: string;
     role: UserRole;
+    firstName: string;
+    lastName: string;
     [key: string]: any;
   }) => Promise<void>;
 }
 
-const AppContext = createContext<AppContext | undefined>(undefined);
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppContextProvider = ({
   children,
@@ -36,50 +37,67 @@ export const AppContextProvider = ({
   children: React.ReactNode;
 }) => {
   const [toast, setToast] = useState<ToastMessage | undefined>(undefined);
+  const [user, setUser] = useState<UserData | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<AppUser | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    // Check authentication status on mount
-    const checkAuth = async () => {
-      try {
-        const currentUser = await getCurrentUser();
-        if (currentUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as UserData;
+          setUser(userData);
           setIsLoggedIn(true);
-          setUser(currentUser as AppUser);
-          const role = await getUserRole();
-          setUserRole(role as UserRole);
+          const role = userData?.role as UserRole;
+          setUserRole(role);
         }
-      } catch (error) {
-        console.error("Auth check error:", error);
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+        setUserRole(null);
       }
-    };
-    checkAuth();
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const handleSignIn = async (user: AppUser) => {
+  const handleSignIn = (userData: UserData) => {
+    setUser(userData);
     setIsLoggedIn(true);
-    setUser(user);
-    const role = await getUserRole();
-    setUserRole(role as UserRole);
+    const role = userData?.role as UserRole;
+    setUserRole(role);
   };
 
-  const handleSignOut = () => {
-    setIsLoggedIn(false);
-    setUser(null);
-    setUserRole(null);
+  const handleSignOut = async () => {
+    try {
+      await auth.signOut();
+      setUser(null);
+      setIsLoggedIn(false);
+      setUserRole(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const register = async (userData: { 
+    uid: string;
     email: string;
     password: string;
     role: UserRole;
+    firstName: string;
+    lastName: string;
     [key: string]: any;
   }) => {
     try {
-      const newUser = await createUser(userData);
-      await handleSignIn(newUser as AppUser);
+      const userDataFormatted: UserData = {
+        uid: userData.uid || '',
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: userData.role
+      };
+      await handleSignIn(userDataFormatted);
     } catch (error) {
       console.error("Registration error:", error);
       throw error;
@@ -120,8 +138,8 @@ export const AppContextProvider = ({
 
 export const useAppContext = () => {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error("useAppContext must be used within an AppContextProvider");
+  if (context === undefined) {
+    throw new Error('useAppContext must be used within an AppContextProvider');
   }
   return context;
 };

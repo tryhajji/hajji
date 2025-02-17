@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Client, Account, Users } from 'node-appwrite';
+import { auth } from 'firebase-admin';
+import { db } from '../config/firebase';
 
 // Initialize Appwrite client
 const client = new Client()
@@ -16,41 +18,34 @@ export const verifyAppwriteToken = async (
   next: NextFunction
 ) => {
   try {
-    // Get the Appwrite session token from headers
-    const sessionToken = req.headers['x-appwrite-session'];
+    const token = req.headers.authorization?.split('Bearer ')[1];
     
-    console.log('Verifying session token:', sessionToken ? 'Token present' : 'No token');
-    
-    if (!sessionToken) {
-      return res.status(401).json({ message: 'No session token provided' });
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
     }
 
-    try {
-      // Get user ID from the session token
-      const [userId] = (sessionToken as string).split('.');
-      if (!userId) {
-        return res.status(401).json({ message: 'Invalid session format' });
-      }
-
-      // Verify user exists
-      try {
-        const user = await users.get(userId);
-        console.log('Session verified for user:', user.$id);
-        req.userId = user.$id;
-        next();
-      } catch (error) {
-        console.error('User verification error:', error);
-        return res.status(401).json({ message: 'Invalid user' });
-      }
-    } catch (error) {
-      console.error('Session verification error:', error);
-      if (error instanceof Error) {
-        return res.status(401).json({ message: `Invalid session: ${error.message}` });
-      }
-      return res.status(401).json({ message: 'Invalid session' });
+    const decodedToken = await auth().verifyIdToken(token);
+    
+    // Fetch user data from Firestore
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    const userData = userDoc.data();
+    
+    // Set user information in the request
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email || '',
+      role: userData?.role || 'client',
+      firstName: userData?.firstName || '',
+      lastName: userData?.lastName || ''
+    };
+
+    next();
   } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Auth error:', error);
+    return res.status(401).json({ error: 'Invalid token' });
   }
 }; 

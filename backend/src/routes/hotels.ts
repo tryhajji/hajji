@@ -3,7 +3,7 @@ import Hotel from "../models/hotel";
 import { BookingType, HotelSearchResponse } from "../shared/types";
 import { param, validationResult } from "express-validator";
 import Stripe from "stripe";
-import verifyToken from "../middleware/auth";
+import { verifyAuth as verifyToken } from "../middleware/auth";
 
 const stripe = new Stripe(process.env.STRIPE_API_KEY as string);
 
@@ -98,8 +98,8 @@ router.post(
       return res.status(400).json({ message: "Hotel not found" });
     }
 
-    if (!req.userId) {
-      return res.status(401).json({ message: "User not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const totalCost = hotel.pricePerNight * numberOfNights;
@@ -109,7 +109,7 @@ router.post(
       currency: "gbp",
       metadata: {
         hotelId,
-        userId: req.userId.toString()
+        userId: req.user.uid.toString()
       },
     });
 
@@ -132,6 +132,10 @@ router.post(
   verifyToken,
   async (req: Request, res: Response) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const paymentIntentId = req.body.paymentIntentId;
 
       const paymentIntent = await stripe.paymentIntents.retrieve(
@@ -144,7 +148,7 @@ router.post(
 
       if (
         paymentIntent.metadata.hotelId !== req.params.hotelId ||
-        paymentIntent.metadata.userId !== req.userId
+        paymentIntent.metadata.userId !== req.user.uid
       ) {
         return res.status(400).json({ message: "payment intent mismatch" });
       }
@@ -157,7 +161,7 @@ router.post(
 
       const newBooking: BookingType = {
         ...req.body,
-        userId: req.userId,
+        userId: req.user.uid,
       };
 
       const hotel = await Hotel.findOneAndUpdate(

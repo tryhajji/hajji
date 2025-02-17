@@ -1,56 +1,70 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { account, getCurrentUser } from '../appwrite';
-import { Models } from 'appwrite';
+import { auth, db } from '../firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserData } from '../firebase';
 
 interface AuthContextType {
-  user: Models.User<Models.Preferences> | null;
+  isAuthenticated: boolean;
+  user: UserData | null;
   loading: boolean;
-  error: string | null;
-  checkAuth: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const checkAuth = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-      setError(null);
-    } catch (error) {
-      console.error('Auth check error:', error);
-      setUser(null);
-      setError('Authentication failed');
-    } finally {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          setUser(userDoc.data() as UserData);
+          setIsAuthenticated(true);
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
       setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const logout = async () => {
+    await auth.signOut();
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  const login = async (email: string, password: string) => {
     try {
-      await account.deleteSession('current');
-      setUser(null);
-      navigate('/sign-in');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      
+      if (userDoc.exists()) {
+        setUser(userDoc.data() as UserData);
+        setIsAuthenticated(true);
+      } else {
+        console.error('User document not found');
+      }
     } catch (error) {
-      console.error('Logout error:', error);
-      setError('Logout failed');
+      console.error('Login error:', error);
+      throw error;
     }
   };
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ user, loading, error, checkAuth, logout }}>
-      {children}
+    <AuthContext.Provider value={{ isAuthenticated, user, loading, logout, login }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

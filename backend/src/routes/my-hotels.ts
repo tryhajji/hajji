@@ -5,6 +5,7 @@ import Hotel from "../models/hotel";
 import verifyToken from "../middleware/auth";
 import { body } from "express-validator";
 import { HotelType } from "../shared/types";
+import { verifyAppwriteToken } from '../middleware/verifyAppwriteToken';
 
 const router = express.Router();
 
@@ -57,21 +58,32 @@ router.post(
   }
 );
 
-router.get("/", verifyToken, async (req: Request, res: Response) => {
+router.get("/my-hotels", verifyAppwriteToken, async (req: Request, res: Response) => {
   try {
-    const hotels = await Hotel.find({ userId: req.userId });
-    res.json(hotels);
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = req.user.uid;
+
+    const hotels = await Hotel.find({ userId });
+    res.status(200).json(hotels);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching hotels" });
+    console.error('Error fetching user hotels:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 router.get("/:id", verifyToken, async (req: Request, res: Response) => {
   const id = req.params.id.toString();
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const hotel = await Hotel.findOne({
       _id: id,
-      userId: req.userId,
+      userId: req.user.uid,
     });
     res.json(hotel);
   } catch (error) {
@@ -84,14 +96,20 @@ router.put(
   verifyToken,
   upload.array("imageFiles"),
   async (req: Request, res: Response) => {
+    
+      
+
     try {
       const updatedHotel: HotelType = req.body;
       updatedHotel.lastUpdated = new Date();
-
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
       const hotel = await Hotel.findOneAndUpdate(
         {
           _id: req.params.hotelId,
-          userId: req.userId,
+          userId: req.user.uid,
         },
         updatedHotel,
         { new: true }

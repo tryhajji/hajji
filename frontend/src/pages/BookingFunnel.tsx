@@ -7,12 +7,11 @@ import {
   useElements, 
   PaymentElement
 } from '@stripe/react-stripe-js';
-import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { useAppContext } from '../contexts/AppContext';
-import { loginWithGoogle } from '../appwrite';
+import { auth, googleProvider } from '../firebase';
+import { signInWithPopup } from 'firebase/auth';
 import Footer from '../components/Footer';
-import { account } from '../appwrite';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
@@ -52,11 +51,12 @@ const BookingFunnel = () => {
     }
   }, [isLoggedIn]);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleLogin = async () => {
     try {
-      await loginWithGoogle();
+      await signInWithPopup(auth, googleProvider);
+      // The redirect will happen automatically
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      console.error('Google login error:', error);
     }
   };
 
@@ -94,7 +94,7 @@ const BookingFunnel = () => {
       // Get current session
       let session;
       try {
-        session = await account.getSession('current');
+        session = await auth.currentUser;
         if (!session) {
           throw new Error('No active session found');
         }
@@ -105,7 +105,7 @@ const BookingFunnel = () => {
       }
 
       // Format the session ID to include user ID
-      const sessionHeader = `${session.userId}.${session.$id}`;
+      const sessionHeader = `${session.uid}.${session.uid}`;
 
       console.log('Creating payment intent with data:', {
         amount: total.total,
@@ -120,11 +120,11 @@ const BookingFunnel = () => {
         }
       });
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-payment-intent`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payment/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-appwrite-session': sessionHeader
+          'Authorization': `Bearer ${await session.getIdToken()}`
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -137,7 +137,7 @@ const BookingFunnel = () => {
             end_date: endDate?.toISOString(),
             guests: guests,
             payment_method: paymentMethod,
-            userId: session.userId
+            userId: session.uid
           }
         }),
       });
@@ -335,7 +335,7 @@ const BookingFunnel = () => {
                         <span>Continue with Facebook</span>
                       </button>
                       <button 
-                        onClick={handleGoogleSignIn}
+                        onClick={handleGoogleLogin}
                         className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50"
                       >
                         <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">

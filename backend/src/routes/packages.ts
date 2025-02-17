@@ -6,6 +6,7 @@ import Package from "../models/package";
 import Stripe from "stripe";
 import { cacheMiddleware } from '../middleware/cache';
 import { clearCache } from '../middleware/cache';
+import { verifyAppwriteToken } from '../middleware/verifyAppwriteToken';
 
 const stripe = new Stripe(process.env.STRIPE_API_KEY as string);
 const router = express.Router();
@@ -66,6 +67,10 @@ router.post(
   verifyToken,
   async (req: Request, res: Response) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const { paymentIntentId, packageId, startDate, endDate, guests, totalAmount } = req.body;
 
       // Verify payment intent
@@ -74,15 +79,9 @@ router.post(
         return res.status(400).json({ message: 'Payment not successful' });
       }
 
-      // Verify package exists
-      const package_data = await Package.findById(packageId);
-      if (!package_data) {
-        return res.status(404).json({ message: 'Package not found' });
-      }
-
       // Create booking
       const booking = new Booking({
-        userId: req.userId,
+        userId: req.user.uid,
         packageId,
         paymentIntentId,
         startDate,
@@ -106,9 +105,13 @@ router.get(
   verifyToken,
   async (req: Request, res: Response) => {
     try {
-      const bookings = await Booking.find({ userId: req.userId })
-        .populate('packageId')  // Populate package details
-        .sort({ bookingDate: -1 }); // Most recent first
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const bookings = await Booking.find({ userId: req.user.uid })
+        .populate('packageId')
+        .sort({ bookingDate: -1 });
 
       res.json(bookings);
     } catch (error) {
@@ -142,5 +145,42 @@ router.post('/', verifyToken, async (req: Request, res: Response) => {
 
 // Similar for update and delete routes
 // ... rest of your routes
+
+router.post('/create-package', verifyAppwriteToken, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const newPackage = {
+      userId: req.user.uid,
+      // other package details...
+    };
+
+    const packageDoc = new Package(newPackage);
+    await packageDoc.save();
+
+    res.status(201).json(packageDoc);
+  } catch (error) {
+    console.error('Error creating package:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+router.get('/some-route', verifyAppwriteToken, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = req.user.uid;
+
+    const packages = await Package.find({ userId });
+    res.status(200).json(packages);
+  } catch (error) {
+    console.error('Error fetching packages:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 export default router; 
